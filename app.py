@@ -14,6 +14,18 @@ valid_userid = [
 @app.route('/')
 def view():
     return render_template('index.html')
+import os
+import pickle as pk
+
+def load_pickle(file_name):
+    path = os.path.join('pickle_file', file_name)
+    if os.path.exists(path):
+        return pk.load(open(path, 'rb'))
+    else:
+        raise FileNotFoundError(f"{file_name} not found.")
+
+def recommend_products(user_name):
+    count_vector = load_pickle('count_vector.pkl')
 
 @app.route('/recommend', methods=['POST'])
 def recommend_top5():
