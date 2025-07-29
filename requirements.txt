@@ -1,10 +1,9 @@
 Flask==1.1.1
-gunicorn
+gunicorn==20.1.0
 Jinja2==2.10.3
 MarkupSafe==1.1.1
 Werkzeug==0.15.5
 
-# Fix numpy & sklearn to avoid source builds
 numpy==1.21.6
 scikit-learn==0.24.2
 scipy==1.7.3
@@ -13,11 +12,10 @@ nltk==3.4.5
 pandas==1.3.5
 requests==2.25.1
 spacy==3.1.2
+
 pickleshare==0.7.5
 chardet==3.0.4
-
-# Required only for model compatibility
 sklearn==0.0
 
-# spaCy model
+# spaCy model wheel
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.1.0/en_core_web_sm-3.1.0-py3-none-any.whl
