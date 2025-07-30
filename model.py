@@ -102,26 +102,33 @@ def model_predict(text):
     return model.predict(tfidf_vector)
 
 def recommend_products(user_name):
+    import pandas as pd
+
     with open('pickle_file/user_final_rating.pkl', 'rb') as f:
         loaded = pk.load(f)
 
-    # Handle case where it's dict or DataFrame
+    # Convert dict to DataFrame if needed
     if isinstance(loaded, dict):
         recommend_matrix = pd.DataFrame.from_dict(loaded)
-    elif isinstance(loaded, pd.DataFrame):
-        recommend_matrix = loaded
     else:
-        raise TypeError("user_final_rating.pkl is neither a DataFrame nor a dict.")
+        recommend_matrix = loaded
 
+    # Ensure user exists
     if user_name not in recommend_matrix.index:
-        raise ValueError(f"User '{user_name}' not found in recommendation matrix.")
+        return pd.DataFrame(columns=['name', 'reviews_text', 'lemmatized_text', 'predicted_sentiment'])
 
-    product_list = pd.DataFrame(recommend_matrix.loc[user_name].sort_values(ascending=False)[0:20])
-    product_frame = product_df[product_df.name.isin(product_list.index.tolist())]
-    output_df = product_frame[['name', 'reviews_text']].copy()
-    output_df['lemmatized_text'] = output_df['reviews_text'].map(lambda text: normalize_and_lemmaize(text))
-    output_df['predicted_sentiment'] = model_predict(output_df['lemmatized_text'])
-    return output_df
+    # Proceed with top 20 recommendations
+    try:
+        product_list = recommend_matrix.loc[user_name].sort_values(ascending=False)[:20]
+        product_frame = product_df[product_df['name'].isin(product_list.index.tolist())]
+
+        output_df = product_frame[['name', 'reviews_text']].copy()
+        output_df['lemmatized_text'] = output_df['reviews_text'].map(lambda text: normalize_and_lemmaize(str(text)))
+        output_df['predicted_sentiment'] = model_predict(output_df['lemmatized_text'])
+        return output_df
+    except Exception as e:
+        print("Error in recommendation:", e)
+        return pd.DataFrame(columns=['name', 'reviews_text', 'lemmatized_text', 'predicted_sentiment'])
 
 
 def top5_products(df):
