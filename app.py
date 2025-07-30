@@ -1,5 +1,8 @@
 from flask import Flask, render_template, request
+import model
 import traceback
+import os
+import pickle as pka
 
 app = Flask(__name__)
 
@@ -14,6 +17,19 @@ valid_userid = [
 def view():
     return render_template('index.html')
 
+# Safe loader for pickle files
+def load_pickle(file_name):
+    path = os.path.join('pickle_file', file_name)
+    try:
+        with open(path, 'rb') as f:
+            return pka.load(f)
+    except FileNotFoundError:
+        print(f"[ERROR] Pickle file '{file_name}' not found at {path}")
+        return None
+    except Exception as e:
+        print(f"[ERROR] Failed to load pickle file '{file_name}': {e}")
+        return None
+
 @app.route('/recommend', methods=['POST'])
 def recommend_top5():
     try:
@@ -22,22 +38,17 @@ def recommend_top5():
         print(f"User name received: {user_name}")
 
         if user_name in valid_userid:
-            # ✅ Stubbed dummy product recommendation
-            top5_products = [
-                ["Product A"],
-                ["Product B"],
-                ["Product C"],
-                ["Product D"],
-                ["Product E"]
-            ]
-            column_names = ["Product Name"]
+            top20_products = model.recommend_products(user_name)
+            if top20_products is None:
+                return render_template('index.html', text='Recommendation system currently unavailable.')
 
+            get_top5 = model.top5_products(top20_products)
             return render_template(
                 'index.html',
-                column_names=column_names,
-                row_data=top5_products,
+                column_names=get_top5.columns.values,
+                row_data=get_top5.values.tolist(),
                 zip=zip,
-                text='(Demo) Recommended products'
+                text='Recommended products'
             )
         else:
             return render_template('index.html', text='No recommendation found for the user.')
@@ -48,4 +59,4 @@ def recommend_top5():
         return render_template('index.html', text='An internal error occurred. Please try again later.')
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
