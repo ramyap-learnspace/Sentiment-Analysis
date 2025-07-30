@@ -116,7 +116,7 @@ def model_predict(text):
     return output
 
 def recommend_products(user_name):
-    recommend_matrix = pk.load(open('pickle_file/user_final_rating.pkl', 'rb'))
+    recommend_matrix = pd.DataFrame.from_dict(pk.load(open('pickle_file/user_final_rating.pkl', 'rb')))
     product_list = pd.DataFrame(recommend_matrix.loc[user_name].sort_values(ascending=False)[0:20])
     product_frame = product_df[product_df.name.isin(product_list.index.tolist())]
     output_df = product_frame[['name', 'reviews_text']].copy()
