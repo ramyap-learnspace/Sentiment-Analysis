@@ -103,21 +103,26 @@ def model_predict(text):
 
 def recommend_products(user_name):
     with open('pickle_file/user_final_rating.pkl', 'rb') as f:
-    loaded = pk.load(f)
+        loaded = pk.load(f)
 
-    # Safely convert dict to DataFrame if needed
+    # Handle case where it's dict or DataFrame
     if isinstance(loaded, dict):
         recommend_matrix = pd.DataFrame.from_dict(loaded)
-    else:
+    elif isinstance(loaded, pd.DataFrame):
         recommend_matrix = loaded
+    else:
+        raise TypeError("user_final_rating.pkl is neither a DataFrame nor a dict.")
 
+    if user_name not in recommend_matrix.index:
+        raise ValueError(f"User '{user_name}' not found in recommendation matrix.")
 
     product_list = pd.DataFrame(recommend_matrix.loc[user_name].sort_values(ascending=False)[0:20])
     product_frame = product_df[product_df.name.isin(product_list.index.tolist())]
     output_df = product_frame[['name', 'reviews_text']].copy()
-    output_df['lemmatized_text'] = output_df['reviews_text'].map(normalize_and_lemmaize)
+    output_df['lemmatized_text'] = output_df['reviews_text'].map(lambda text: normalize_and_lemmaize(text))
     output_df['predicted_sentiment'] = model_predict(output_df['lemmatized_text'])
     return output_df
+
 
 def top5_products(df):
     total_product = df.groupby(['name']).agg('count')
