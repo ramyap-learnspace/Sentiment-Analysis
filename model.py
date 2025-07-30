@@ -1,15 +1,13 @@
 # model.py
 
-# Importing Libraries
+# --- Imports ---
 import pandas as pd
 import pandas._libs.internals  # Needed for unpickling custom pandas objects
 import re
 import nltk
-import spacy
 import string
 import os
 import pickle as pk
-import subprocess
 import requests
 
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
@@ -24,15 +22,14 @@ nltk_data_dir = os.path.join(os.getcwd(), 'nltk_data')
 os.makedirs(nltk_data_dir, exist_ok=True)
 nltk.data.path.append(nltk_data_dir)
 
-# Download NLTK resources if not already present
+# Download required NLTK resources
 for resource in ['punkt', 'stopwords', 'wordnet', 'omw-1.4']:
     try:
         nltk.data.find(resource)
     except LookupError:
         nltk.download(resource, download_dir=nltk_data_dir)
 
-# Comment out or safely ignore spaCy loading if not directly used in predictions
-
+# spaCy model loading (optional)
 try:
     import spacy
     nlp = spacy.load('en_core_web_sm', disable=['ner', 'parser'])
@@ -43,23 +40,16 @@ except:
 # Load CSV
 product_df = pd.read_csv('sample30.csv', sep=",")
 
-# --- Preprocessing Utilities ---
+# --- Text Preprocessing Functions ---
 def remove_special_characters(text, remove_digits=True):
     pattern = r'[^a-zA-z0-9\s]' if not remove_digits else r'[^a-zA-z\s]'
-    text = re.sub(pattern, '', text)
-    return text
+    return re.sub(pattern, '', text)
 
 def to_lowercase(words):
     return [word.lower() for word in words]
 
 def remove_punctuation_and_splchars(words):
-    new_words = []
-    for word in words:
-        new_word = re.sub(r'[^\w\s]', '', word)
-        if new_word != '':
-            new_word = remove_special_characters(new_word, True)
-            new_words.append(new_word)
-    return new_words
+    return [re.sub(r'[^\w\s]', '', word) for word in words if word.strip()]
 
 stopword_list = stopwords.words('english')
 
@@ -90,13 +80,11 @@ def normalize_and_lemmaize(input_text):
     lemmas = lemmatize(words)
     return ' '.join(lemmas)
 
-# --- Load Models ---
-
-# Load CountVectorizer & TFIDF
+# --- Load Pretrained Pickles ---
 count_vector = pk.load(open('pickle_file/count_vector.pkl', 'rb'))
 tfidf_transformer = pk.load(open('pickle_file/tfidf_transformer.pkl', 'rb'))
 
-# Download and cache model.pkl from Google Drive (if not present)
+# Load model.pkl from Google Drive if missing
 model_path = 'pickle_file/model.pkl'
 if not os.path.exists(model_path):
     print("Downloading model.pkl from Google Drive...")
@@ -105,31 +93,32 @@ if not os.path.exists(model_path):
     with open(model_path, 'wb') as f:
         f.write(r.content)
 
-# Load classification model
 model = pk.load(open(model_path, 'rb'))
 
-# --- Prediction & Recommendation Functions ---
+# --- Prediction and Recommendation Logic ---
 def model_predict(text):
     word_vector = count_vector.transform(text)
     tfidf_vector = tfidf_transformer.transform(word_vector)
-    output = model.predict(tfidf_vector)
-    return output
+    return model.predict(tfidf_vector)
 
 def recommend_products(user_name):
-    recommend_matrix = pd.DataFrame.from_dict(pk.load(open('pickle_file/user_final_rating.pkl', 'rb')))
+    with open('pickle_file/user_final_rating.pkl', 'rb') as f:
+        recommend_matrix = pk.load(f)
+
+    if not isinstance(recommend_matrix, pd.DataFrame):
+        raise TypeError("Loaded recommend_matrix is not a DataFrame")
+
     product_list = pd.DataFrame(recommend_matrix.loc[user_name].sort_values(ascending=False)[0:20])
     product_frame = product_df[product_df.name.isin(product_list.index.tolist())]
     output_df = product_frame[['name', 'reviews_text']].copy()
-    output_df['lemmatized_text'] = output_df['reviews_text'].map(lambda text: normalize_and_lemmaize(text))
+    output_df['lemmatized_text'] = output_df['reviews_text'].map(normalize_and_lemmaize)
     output_df['predicted_sentiment'] = model_predict(output_df['lemmatized_text'])
     return output_df
 
 def top5_products(df):
     total_product = df.groupby(['name']).agg('count')
-    rec_df = df.groupby(['name', 'predicted_sentiment']).agg('count')
-    rec_df = rec_df.reset_index()
+    rec_df = df.groupby(['name', 'predicted_sentiment']).agg('count').reset_index()
     merge_df = pd.merge(rec_df, total_product['reviews_text'], on='name')
     merge_df['%percentage'] = (merge_df['reviews_text_x'] / merge_df['reviews_text_y']) * 100
     merge_df = merge_df.sort_values(ascending=False, by='%percentage')
-    output_products = pd.DataFrame(merge_df['name'][merge_df['predicted_sentiment'] == 1][:5])
-    return output_products
+    return pd.DataFrame(merge_df['name'][merge_df['predicted_sentiment'] == 1][:5])
