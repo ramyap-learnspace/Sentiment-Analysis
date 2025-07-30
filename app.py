@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request
-import model
 import traceback
 
 app = Flask(__name__)
@@ -14,18 +13,6 @@ valid_userid = [
 @app.route('/')
 def view():
     return render_template('index.html')
-import os
-import pickle as pk
-
-def load_pickle(file_name):
-    path = os.path.join('pickle_file', file_name)
-    if os.path.exists(path):
-        return pk.load(open(path, 'rb'))
-    else:
-        raise FileNotFoundError(f"{file_name} not found.")
-
-def recommend_products(user_name):
-    count_vector = load_pickle('count_vector.pkl')
 
 @app.route('/recommend', methods=['POST'])
 def recommend_top5():
@@ -35,17 +22,22 @@ def recommend_top5():
         print(f"User name received: {user_name}")
 
         if user_name in valid_userid:
-            top20_products = model.recommend_products(user_name)
-            print("Top 20 products retrieved:")
-            print(top20_products.head())
+            # ✅ Stubbed dummy product recommendation
+            top5_products = [
+                ["Product A"],
+                ["Product B"],
+                ["Product C"],
+                ["Product D"],
+                ["Product E"]
+            ]
+            column_names = ["Product Name"]
 
-            get_top5 = model.top5_products(top20_products)
             return render_template(
                 'index.html',
-                column_names=get_top5.columns.values,
-                row_data=get_top5.values.tolist(),
+                column_names=column_names,
+                row_data=top5_products,
                 zip=zip,
-                text='Recommended products'
+                text='(Demo) Recommended products'
             )
         else:
             return render_template('index.html', text='No recommendation found for the user.')
@@ -57,4 +49,3 @@ def recommend_top5():
 
 if __name__ == '__main__':
     app.run(debug=False)
-s
