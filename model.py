@@ -30,12 +30,14 @@ for resource in ['punkt', 'stopwords', 'wordnet', 'omw-1.4']:
     except LookupError:
         nltk.download(resource, download_dir=nltk_data_dir)
 
-# Download spaCy model if missing
+# Comment out or safely ignore spaCy loading if not directly used in predictions
+
 try:
+    import spacy
     nlp = spacy.load('en_core_web_sm', disable=['ner', 'parser'])
 except:
-    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
-    nlp = spacy.load('en_core_web_sm', disable=['ner', 'parser'])
+    print("[WARNING] spaCy model 'en_core_web_sm' could not be loaded. Skipping NLP pipeline.")
+    nlp = None
 
 # Load CSV
 product_df = pd.read_csv('sample30.csv', sep=",")
