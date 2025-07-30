@@ -23,17 +23,21 @@ nlp = spacy.load('en_core_web_sm', disable=['ner', 'parser'])
 # Create pickle folder if not exists
 os.makedirs('pickle_file', exist_ok=True)
 
-# Only download `model.pkl` if missing
-MODEL_URL = "https://drive.google.com/file/d/1LvmP5v0OiPxHnbj27azpMumYK_bFs0hC/view?usp=sharing"  
-model_path = os.path.join("pickle_file", "model.pkl")
-if not os.path.exists(model_path):
-    print("Downloading model.pkl...")
-    r = requests.get(MODEL_URL)
-    if r.status_code == 200:
-        with open(model_path, "wb") as f:
-            f.write(r.content)
-    else:
-        raise Exception(f"Failed to download model.pkl: {r.status_code}")
+import os
+import urllib.request
+
+def download_model_if_needed():
+    model_path = 'pickle_file/model.pkl'
+    if not os.path.exists(model_path):
+        print("Downloading model.pkl from Google Drive...")
+        url = 'https://drive.google.com/uc?export=download&id=1LvmP5v0OiPxHnbj27azpMumYK_bFs0hC'
+        os.makedirs('pickle_file', exist_ok=True)
+        urllib.request.urlretrieve(url, model_path)
+        print("Download complete.")
+
+# Call before loading model.pkl
+download_model_if_needed()
+
 
 # Load pickle files
 count_vector = pk.load(open("pickle_file/count_vector.pkl", "rb"))
