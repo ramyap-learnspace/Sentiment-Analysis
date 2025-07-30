@@ -103,10 +103,14 @@ def model_predict(text):
 
 def recommend_products(user_name):
     with open('pickle_file/user_final_rating.pkl', 'rb') as f:
-        recommend_matrix = pk.load(f)
+    loaded = pk.load(f)
 
-    if not isinstance(recommend_matrix, pd.DataFrame):
-        raise TypeError("Loaded recommend_matrix is not a DataFrame")
+    # Safely convert dict to DataFrame if needed
+    if isinstance(loaded, dict):
+        recommend_matrix = pd.DataFrame.from_dict(loaded)
+    else:
+        recommend_matrix = loaded
+
 
     product_list = pd.DataFrame(recommend_matrix.loc[user_name].sort_values(ascending=False)[0:20])
     product_frame = product_df[product_df.name.isin(product_list.index.tolist())]
