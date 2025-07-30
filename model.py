@@ -2,6 +2,7 @@
 
 # Importing Libraries
 import pandas as pd
+import pandas._libs.internals  # Needed for unpickling custom pandas objects
 import re
 import nltk
 import spacy
